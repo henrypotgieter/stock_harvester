@@ -1,0 +1,10 @@
+def initialize():
+    global symbol_ignore
+    global channels
+    global common_words
+    global symbols
+    global current_results
+    global API_KEY
+    global BASE_URL
+    global TIME_SUB
+    global DISCORD_CHANNEL
