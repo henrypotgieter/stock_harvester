@@ -1,4 +1,5 @@
-import re, discord
+import re
+import discord
 import globals
 from tabulate import tabulate
 from discord.ext import commands
@@ -6,6 +7,7 @@ from functions import Functions
 
 # Instantiate functions
 harvester = Functions()
+
 
 class botcommands(commands.Cog, name="General Commands"):
     bot = commands.Bot(command_prefix='!')
@@ -41,6 +43,7 @@ class botcommands(commands.Cog, name="General Commands"):
             for channel in globals.channels:
                 if name == channel:
                     await context.send('Channel already present, unable to add')
+                    return
             matched = re.search("[.'_\-A-Za-z0-9]{6,24}", name).group()
             if matched == name:
                 harvester.add_channel(name)
@@ -89,12 +92,12 @@ class botcommands(commands.Cog, name="General Commands"):
         if await self.valid_command_channel(context):
             was_valid = False
             if globals.symbols.index(name):
-            #for symbol in symbols:
-                #if name == symbol:
+                # for symbol in symbols:
+                # if name == symbol:
                 was_valid = True
                 added = harvester.del_ignore(name)
                 if added == True:
-                        await context.send('Symbol ' + name + ' removed from ignore list.')
+                    await context.send('Symbol ' + name + ' removed from ignore list.')
             if was_valid == False:
                 await context.send('Invalid stock ticker symbol, try again')
 
@@ -122,9 +125,11 @@ class botcommands(commands.Cog, name="General Commands"):
                                 big_string += i[1] + "\n---------\n"
                         if len(i[1][location-con_len:location+con_len+len(symbol)]) >= 0:
                             if iterations <= 0:
-                                big_string += i[1][location-con_len:location+con_len+len(symbol)]
+                                big_string += i[1][location -
+                                                   con_len:location+con_len+len(symbol)]
                             else:
-                                big_string += i[1][location-con_len:location+con_len+len(symbol)] + "\n---------\n"
+                                big_string += i[1][location-con_len:location +
+                                                   con_len+len(symbol)] + "\n---------\n"
                         con_len = 20
                     await context.send('```' + big_string + '```')
             if was_valid == False:
@@ -138,6 +143,7 @@ class botcommands(commands.Cog, name="General Commands"):
                 if not harvester.is_ignored(result):
                     table.append((result))
             await context.send('```\n' + tabulate(table[0:20]) + '```')
+
 
 def setup(bot):
     bot.add_cog(botcommands(bot))
