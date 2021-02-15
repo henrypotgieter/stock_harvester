@@ -38,7 +38,12 @@ class botcommands(commands.Cog, name="General Commands"):
             await context.send('```' + channel_list + '```')
 
     @bot.command(name='channeladd', help='Add channel to channel list.')
-    async def channeladd(self, context, name):
+    async def channeladd(self, context, name = ''):
+        # Check if we got input
+        if len(name) == 0:
+            await context.send('No input provided, please specify a channel')
+            return
+
         if await self.valid_command_channel(context):
             for channel in globals.channels:
                 if name == channel:
@@ -52,7 +57,18 @@ class botcommands(commands.Cog, name="General Commands"):
                 await context.send('Channel name is not valid.')
 
     @bot.command(name='channeldel', help='Delete channel to channel list.')
-    async def channeldel(self, context, name):
+    async def channeldel(self, context, name = ''):
+        # Check if we got input
+        if len(name) == 0:
+            await context.send('No input provided, please specify a channel')
+            return
+
+        # Validate the input meets requirements
+        matched = re.search("[-A-Za-z0-9]{1,6}", name).group()
+        if not matched == name:
+            await context.send('Input does appear valid')
+            return
+
         if await self.valid_command_channel(context):
             for channel in globals.channels:
                 if name == channel:
@@ -77,7 +93,18 @@ class botcommands(commands.Cog, name="General Commands"):
                 await context.send(ignore_list)
 
     @bot.command(name='ignoreadd', help='Add symbol to ignore list.')
-    async def ignoreadd(self, context, name):
+    async def ignoreadd(self, context, name = ''):
+        # Check if we got input
+        if len(name) == 0:
+            await context.send('No input provided, please specify a ticker')
+            return
+
+        # Validate the input meets requirements
+        matched = re.search("[-A-Za-z0-9]{1,6}", name).group()
+        if not matched == name:
+            await context.send('Input does appear valid')
+            return
+
         if await self.valid_command_channel(context):
             if name in globals.symbol_ignore:
                 await context.send('Symbol ' + name + ' already on ignore list.')
@@ -88,7 +115,18 @@ class botcommands(commands.Cog, name="General Commands"):
                 await context.send('Invalid stock ticker symbol, try again')
 
     @bot.command(name='ignoredel', help='Remove symbol from ignore list.')
-    async def ignoredel(self, context, name):
+    async def ignoredel(self, context, name = ''):
+        # Check if we got input
+        if len(name) == 0:
+            await context.send('No input provided, please specify a ticker')
+            return
+
+        # Validate the input meets requirements
+        matched = re.search("[-A-Za-z0-9]{1,6}", name).group()
+        if not matched == name:
+            await context.send('Input does appear valid')
+            return
+
         if await self.valid_command_channel(context):
             was_valid = False
             if globals.symbols.index(name):
