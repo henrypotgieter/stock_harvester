@@ -7,4 +7,4 @@ def initialize():
     global API_KEY
     global BASE_URL
     global TIME_SUB
-    global DISCORD_CHANNEL
+    global CONTROL_CHANNEL
