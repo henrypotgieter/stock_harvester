@@ -40,14 +40,13 @@ intents.members = True
 # Instantiate the BOT
 bot = commands.Bot(command_prefix='!', intents=intents)
 
-
 @bot.event
 async def on_ready():
     print(f'{bot.user.name} has connected to Discord!')
 
 extensions = ['cogs.botcommands']
 if __name__ == "__main__":
-    # globals.initialize()
+    #globals.initialize()
     for extension in extensions:
         try:
             bot.load_extension(extension)

@@ -102,36 +102,53 @@ class botcommands(commands.Cog, name="General Commands"):
                 await context.send('Invalid stock ticker symbol, try again')
 
     @bot.command(name='context', help='Show the comments context, help check for false positives.  Takes symbol ticker as argument.')
-    async def context(self, context, name):
+    async def context(self, context, name = ''):
         if hasattr(context.channel, 'name'):
+            # Set some vars
             con_len = 20
             was_valid = False
-            for symbol in globals.symbols:
-                if name == symbol:
-                    was_valid = True
-                    context_data = sql_conn.context_data_read(name)
-                    print(context_data)
-                    big_string = "----------\n"
-                    iterations = len(context_data[0:20])
-                    for i in context_data[0:20]:
-                        iterations -= 1
-                        location = i[1].find(symbol)
-                        if location < con_len:
-                            con_len = location
-                        if len(i[1]) < 40:
-                            if iterations <= 0:
-                                big_string += i[1]
-                            else:
-                                big_string += i[1] + "\n---------\n"
-                        if len(i[1][location-con_len:location+con_len+len(symbol)]) >= 0:
-                            if iterations <= 0:
-                                big_string += i[1][location -
-                                                   con_len:location+con_len+len(symbol)]
-                            else:
-                                big_string += i[1][location-con_len:location +
-                                                   con_len+len(symbol)] + "\n---------\n"
-                        con_len = 20
-                    await context.send('```' + big_string + '```')
+
+            # Check if we got input
+            if len(name) == 0:
+                await context.send('No input provided, please specify a ticker')
+                return
+
+            # Validate the input meets requirements
+            matched = re.search("[-A-Za-z0-9]{1,6}", name).group()
+            if not matched == name:
+                await context.send('Input does appear valid')
+                return
+
+            # Convert name to uppercase
+            name = name.upper()
+
+            # Check if the name provided is present in the global symbols var
+            if name in globals.symbols:
+                print(name)
+                was_valid = True
+                context_data = harvester.get_context(name)
+                print(context_data)
+                big_string = "----------\n"
+                iterations = len(context_data[0:20])
+                for i in context_data[0:20]:
+                    iterations -= 1
+                    location = i[1].find(name)
+                    if location < con_len:
+                        con_len = location
+                    if len(i[1]) < 40:
+                        if iterations <= 0:
+                            big_string += i[1]
+                        else:
+                            big_string += i[1] + "\n---------\n"
+                    if len(i[1][location-con_len:location+con_len+len(name)]) >= 0:
+                        if iterations <= 0:
+                            big_string += i[1][location -
+                                                con_len:location+con_len+len(name)]
+                        else:
+                            big_string += i[1][location-con_len:location +
+                                                con_len+len(name)] + "\n---------\n"
+                    con_len = 20
+                await context.send('```' + big_string + '```')
             if was_valid == False:
                 await context.send('Invalid stock ticker symbol, try again')
 
