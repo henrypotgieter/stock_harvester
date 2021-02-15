@@ -145,3 +145,5 @@ class Functions(object):
             sql_conn.curr_data_write(symbol, qty)
             globals.current_results.append((symbol,qty))
 
+    def get_context(self, symbol):
+        return sql_conn.context_data_read(symbol)
