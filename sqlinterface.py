@@ -9,18 +9,22 @@ class Sqlconn(object):
         self.DB = os.getenv('MYSQL_DB')
         self.USER = os.getenv('MYSQL_USER')
         self.PASS = os.getenv('MYSQL_PASS')
-        self.db_conn = mysql.connect(host=self.HOST, database=self.DB, user=self.USER, password=self.PASS)
-        self.c = self.db_conn.cursor()
 
 
     def sql_read(self, query):
+        self.db_conn = mysql.connect(host=self.HOST, database=self.DB, user=self.USER, password=self.PASS)
+        self.c = self.db_conn.cursor()
         self.c.execute(query)
         data = self.c.fetchall()
+        self.db_conn.close()
         return data
 
     def sql_write(self, query):
+        self.db_conn = mysql.connect(host=self.HOST, database=self.DB, user=self.USER, password=self.PASS)
+        self.c = self.db_conn.cursor()
         data = self.c.execute(query)
         self.db_conn.commit()
+        self.db_conn.close()
         return data
 
     def symbol_ignore_read(self):

@@ -175,10 +175,8 @@ class botcommands(commands.Cog, name="General Commands"):
 
                 # Check if the name provided is present in the global symbols var
                 if name in globals.symbols:
-                    print(name)
                     was_valid = True
                     context_data = harvester.get_context(name)
-                    print(context_data)
                     big_string = "----------\n"
                     iterations = len(context_data[0:20])
                     for i in context_data[0:20]:
@@ -208,10 +206,10 @@ class botcommands(commands.Cog, name="General Commands"):
         if await self.valid_channel(context):
             if hasattr(context.channel, 'name'):
                 table = []
-                for result in globals.current_results:
+                for result in harvester.get_results():
                     if not harvester.is_ignored(result):
                         table.append((result))
-                await context.send('```\n' + tabulate(table[0:20]) + '```')
+                await context.send('```Last execution: ' + harvester.last_run_utc_print() + '\n' + tabulate(table[0:20]) + '```')
 
 
 def setup(bot):

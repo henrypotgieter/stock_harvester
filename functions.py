@@ -75,27 +75,37 @@ class Functions(object):
             return True
         return False
 
+    def last_run(self):
+        last_ran_time = self.sql_conn.last_ran_read()
+        return last_ran_time[0][0]
+
+    def last_run_utc_print(self):
+        last_ran_time = self.last_run()
+        return datetime.datetime.utcfromtimestamp(last_ran_time).strftime('%Y-%m-%dT%H:%M:%SZ')
+
+
     def scraper(self):
         # Generate empty comments list
         comments = []
 
         # Get time from db
-        last_ran_time = self.sql_conn.last_ran_read()
+        last_ran_time = self.last_run()
 
         datetime.datetime.utcfromtimestamp
 
         # Get time now
         current_utc_int_timestamp = self.get_current_utc_timestamp()
-        time_difference = current_utc_int_timestamp - last_ran_time[0][0]
+        time_difference = current_utc_int_timestamp - last_ran_time
 
         # Check if we're past 1 hour from last time we ran the scraper
         if time_difference < 3600:
             # Return UTC timestamp of last execution + 1 hour to tell user when
             # they can run the command again
-            return datetime.datetime.utcfromtimestamp(last_ran_time[0][0] + 3600).strftime('%Y-%m-%dT%H:%M:%SZ')
+            return datetime.datetime.utcfromtimestamp(last_ran_time + 3600).strftime('%Y-%m-%dT%H:%M:%SZ')
         else:
             # Update timestamp
             self.scrape_write_time()
+            print ("Conducting scraping event at " + datetime.datetime.utcfromtimestamp(current_utc_int_timestamp).strftime('%Y-%m-%dT%H:%M:%SZ'))
 
             # Build a discoveries dictionary that we populate with symbols
             discoveries = {}
@@ -152,7 +162,7 @@ class Functions(object):
                                 comments.append(" " + cleaned(comment_raw) + " ")
 
             # Process the comments discovered
-            globals.current_results = []
+            #globals.current_results = []
             self.sql_conn.context_purge()
             for comment in comments:
                 for symbol in globals.symbols:
@@ -179,8 +189,12 @@ class Functions(object):
             sorted_dict = {k: v for k, v in sorted_tuples}
             for symbol, qty in list(reversed(list(sorted_dict.items())))[0:50]:
                 self.sql_conn.curr_data_write(symbol, qty)
-                globals.current_results.append((symbol,qty))
+                #globals.current_results.append((symbol,qty))
             return 1;
 
     def get_context(self, symbol):
         return self.sql_conn.context_data_read(symbol)
+
+    def get_results(self):
+        data = self.sql_conn.curr_data_read()
+        return data
