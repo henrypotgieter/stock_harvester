@@ -24,10 +24,9 @@ Install the required packages as follows:
 
 ```
 pip install discord
-pip install dotenv
+pip install python-dotenv
 pip install tabulate
-pip install requests
-pip install json
+pip install simplejson
 pip install mysql-connector-python
 ```
 

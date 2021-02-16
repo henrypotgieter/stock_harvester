@@ -30,7 +30,7 @@ class botcommands(commands.Cog, name="General Commands"):
 
     @bot.command(name='scrape', help='Scrape channels and update stock ticker mentions')
     async def scrape_channels(self, context):
-        if await self.valid_channel(context):
+        if await self.valid_command_channel(context):
             await context.send("Scraping channels.. this will take some time!")
             result = harvester.scraper()
             if result != 1:
