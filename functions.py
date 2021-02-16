@@ -1,28 +1,35 @@
+import os
 import globals
 import datetime
 import json
 import requests
+from dotenv import load_dotenv
 from datetime import timezone
 from sqlinterface import Sqlconn
 
-sql_conn = Sqlconn()
 
 ''' All the supporting functions, keep the bot.py file clean '''
 
 class Functions(object):
+    def __init__(self):
+        load_dotenv('.env')
+        self.API_KEY = os.getenv('API_KEY')
+        self.BASE_URL = os.getenv('BASE_URL')
+        self.TIME_SUB = os.getenv('TIME_SUB')
+        self.sql_conn = Sqlconn()
+
     def add_channel(self, channel_name):
         globals.channels.append(channel_name)
-        sql_conn.channel_write(channel_name)
+        self.sql_conn.channel_write(channel_name)
 
     def del_channel(self, channel_name):
         globals.channels.remove(channel_name)
-        sql_conn.channel_del(channel_name)
+        self.sql_conn.channel_del(channel_name)
 
     def add_ignore(self, symbol_add_ignore):
-        print(symbol_add_ignore)
         for symbol in globals.symbols:
             if symbol_add_ignore == symbol:
-                sql_conn.symbols_ignore_write(symbol_add_ignore)
+                self.sql_conn.symbols_ignore_write(symbol_add_ignore)
                 globals.symbol_ignore.append(symbol_add_ignore)
                 return True
         return False
@@ -35,13 +42,13 @@ class Functions(object):
 
     def scrape_write_time(self):
         current_utc_int_timestamp = self.get_current_utc_timestamp()
-        sql_conn.last_ran_write(str(current_utc_int_timestamp))
+        self.sql_conn.last_ran_write(str(current_utc_int_timestamp))
 
     def del_ignore(self, symbol_del_ignore):
         for symbol in globals.symbols:
             if symbol_del_ignore == symbol:
                 globals.symbol_ignore.remove(symbol_del_ignore)
-                sql_conn.symbols_ignore_remove(symbol_del_ignore)
+                self.sql_conn.symbols_ignore_remove(symbol_del_ignore)
                 return True
         return False
 
@@ -73,7 +80,7 @@ class Functions(object):
         comments = []
 
         # Get time from db
-        last_ran_time = sql_conn.last_ran_read()
+        last_ran_time = self.sql_conn.last_ran_read()
 
         datetime.datetime.utcfromtimestamp
 
@@ -96,13 +103,12 @@ class Functions(object):
                 if len(symbol) > 1:
                     discoveries[symbol] = 0
 
-            time_pub_after = self.pub_after_time(globals.TIME_SUB)
+            time_pub_after = self.pub_after_time(self.TIME_SUB)
 
             # Primary loop to parse data from each channel
             for channel in globals.channels:
                 # Build initial pull request and process json
-                print(channel)
-                you_pull = requests.get(globals.BASE_URL + channel + "&key=" + globals.API_KEY)
+                you_pull = requests.get(self.BASE_URL + channel + "&key=" + self.API_KEY)
                 data = you_pull.text
                 json_data = json.loads(data)
 
@@ -111,14 +117,15 @@ class Functions(object):
                 dont_bother = False
 
                 if not 'items' in json_data:
-                    print(data)
                     continue
                 # Append initial comments
                 for item in json_data['items']:
                     if self.too_old(item['snippet']['topLevelComment']['snippet']['publishedAt'], time_pub_after):
                         dont_bother = True
                     else:
-                        comments.append(" " + item['snippet']['topLevelComment']['snippet']['textOriginal'] + " ")
+                        comment_raw = item['snippet']['topLevelComment']['snippet']['textOriginal']
+                        cleaned = lambda s: "".join(i for i in s if 31 < ord(i) < 127)
+                        comments.append(" " + cleaned(comment_raw) + " ")
 
                 # Check if there was a next page token, set it and then adjust loop control to True
                 if 'nextPageToken' in json_data and dont_bother == False:
@@ -127,7 +134,7 @@ class Functions(object):
                     # Loop until there is no more!
                     while more:
                         # Grab data request again using page token and published after time
-                        you_pull = requests.get(globals.BASE_URL + channel +"&pageToken=" + next_page_token + "&publishedAfter=" + time_pub_after +  "&key=" + globals.API_KEY)
+                        you_pull = requests.get(self.BASE_URL + channel +"&pageToken=" + next_page_token + "&publishedAfter=" + time_pub_after +  "&key=" + self.API_KEY)
                         data_sub = you_pull.text
                         json_data_sub = json.loads(data_sub)
                         # If no more next page then break the loop
@@ -140,11 +147,13 @@ class Functions(object):
                             if self.too_old(item['snippet']['topLevelComment']['snippet']['publishedAt'], time_pub_after):
                                 more = False
                             else:
-                                comments.append(" " + item['snippet']['topLevelComment']['snippet']['textOriginal'] + " ")
+                                comment_raw = item['snippet']['topLevelComment']['snippet']['textOriginal']
+                                cleaned = lambda s: "".join(i for i in s if 31 < ord(i) < 127)
+                                comments.append(" " + cleaned(comment_raw) + " ")
 
             # Process the comments discovered
             globals.current_results = []
-            sql_conn.context_purge()
+            self.sql_conn.context_purge()
             for comment in comments:
                 for symbol in globals.symbols:
                     comment_context_limit = 20
@@ -153,7 +162,7 @@ class Functions(object):
                             if len(symbol) > 1:
                                 discoveries[symbol] += 1
                                 if comment_context_limit > 1:
-                                    sql_conn.context_data_write(symbol, comment)
+                                    self.sql_conn.context_data_write(symbol, comment)
                                     comment_context_limit -= 1
 
                     else:
@@ -161,17 +170,17 @@ class Functions(object):
                             if len(symbol) > 1:
                                 discoveries[symbol] += 1
                                 if comment_context_limit > 1:
-                                    sql_conn.context_data_write(symbol, comment)
+                                    self.sql_conn.context_data_write(symbol, comment)
                                     comment_context_limit -= 1
 
             # Sort the comments by highest and report the top 30, write to DB/memory
-            sql_conn.curr_data_purge()
+            self.sql_conn.curr_data_purge()
             sorted_tuples = sorted(discoveries.items(), key=lambda item: item[1])
             sorted_dict = {k: v for k, v in sorted_tuples}
             for symbol, qty in list(reversed(list(sorted_dict.items())))[0:50]:
-                sql_conn.curr_data_write(symbol, qty)
+                self.sql_conn.curr_data_write(symbol, qty)
                 globals.current_results.append((symbol,qty))
             return 1;
 
     def get_context(self, symbol):
-        return sql_conn.context_data_read(symbol)
+        return self.sql_conn.context_data_read(symbol)

@@ -9,6 +9,11 @@ from dotenv import load_dotenv
 '''
 Youtube Comment Harvester bot
 '''
+# Get environment variables
+load_dotenv('.env')
+TOKEN = os.getenv('DISCORD_TOKEN')
+GUILD = os.getenv('DISCORD_GUILD')
+globals.CONTROL_CHANNEL = os.getenv('CONTROL_CHANNEL')
 
 # Instantiate functions class
 harvester = Functions()
@@ -22,18 +27,6 @@ globals.common_words = sql_conn.common_words_read()
 globals.channels = sql_conn.channels_read()
 globals.symbols = sql_conn.symbols_read()
 globals.current_results = sql_conn.curr_data_read()
-
-print(globals.symbol_ignore)
-
-# Get environment variables
-load_dotenv('.env')
-TOKEN = os.getenv('DISCORD_TOKEN')
-GUILD = os.getenv('DISCORD_GUILD')
-globals.CONTROL_CHANNEL = os.getenv('CONTROL_CHANNEL')
-globals.API_KEY = os.getenv('API_KEY')
-globals.BASE_URL = os.getenv('BASE_URL')
-globals.TIME_SUB = os.getenv('TIME_SUB')
-
 
 intents = discord.Intents.default()
 intents.members = True
