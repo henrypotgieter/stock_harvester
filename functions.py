@@ -27,6 +27,16 @@ class Functions(object):
                 return True
         return False
 
+    def get_current_utc_timestamp(self):
+        cur_time = datetime.datetime.now(tz=timezone.utc)
+        utc_timestamp = cur_time.timestamp()
+        current_utc_int_timestamp = int(utc_timestamp)
+        return current_utc_int_timestamp
+
+    def scrape_write_time(self):
+        current_utc_int_timestamp = self.get_current_utc_timestamp()
+        sql_conn.last_ran_write(str(current_utc_int_timestamp))
+
     def del_ignore(self, symbol_del_ignore):
         for symbol in globals.symbols:
             if symbol_del_ignore == symbol:
@@ -37,9 +47,8 @@ class Functions(object):
 
     def pub_after_time(self, time_diff):
         '''Create timestamp to be passed to youtube api'''
-        cur_time = datetime.datetime.now()
-        utc_time = cur_time.replace(tzinfo = timezone.utc)
-        utc_timestamp = utc_time.timestamp()
+        cur_time = datetime.datetime.now(tz=timezone.utc)
+        utc_timestamp = cur_time.timestamp()
         final_time = int(utc_timestamp) - int(time_diff)
         return datetime.datetime.fromtimestamp(final_time).isoformat(timespec='seconds') + "Z"
 
@@ -63,87 +72,106 @@ class Functions(object):
         # Generate empty comments list
         comments = []
 
-        # Build a discoveries dictionary that we populate with symbols
-        discoveries = {}
-        for symbol in globals.symbols:
-            if len(symbol) > 1:
-                discoveries[symbol] = 0
+        # Get time from db
+        last_ran_time = sql_conn.last_ran_read()
 
-        time_pub_after = self.pub_after_time(globals.TIME_SUB)
+        datetime.datetime.utcfromtimestamp
 
-        # Primary loop to parse data from each channel
-        for channel in globals.channels:
-            # Build initial pull request and process json
-            print(channel)
-            you_pull = requests.get(globals.BASE_URL + channel + "&key=" + globals.API_KEY)
-            data = you_pull.text
-            json_data = json.loads(data)
+        # Get time now
+        current_utc_int_timestamp = self.get_current_utc_timestamp()
+        time_difference = current_utc_int_timestamp - last_ran_time[0][0]
 
-            # Loop control flags, reset to false every time
-            more = False
-            dont_bother = False
+        # Check if we're past 1 hour from last time we ran the scraper
+        if time_difference < 3600:
+            # Return UTC timestamp of last execution + 1 hour to tell user when
+            # they can run the command again
+            return datetime.datetime.utcfromtimestamp(last_ran_time[0][0] + 3600).strftime('%Y-%m-%dT%H:%M:%SZ')
+        else:
+            # Update timestamp
+            self.scrape_write_time()
 
-            if not 'items' in json_data:
-                print(data)
-                continue
-            # Append initial comments
-            for item in json_data['items']:
-                if self.too_old(item['snippet']['topLevelComment']['snippet']['publishedAt'], time_pub_after):
-                    dont_bother = True
-                else:
-                    comments.append(" " + item['snippet']['topLevelComment']['snippet']['textOriginal'] + " ")
+            # Build a discoveries dictionary that we populate with symbols
+            discoveries = {}
+            for symbol in globals.symbols:
+                if len(symbol) > 1:
+                    discoveries[symbol] = 0
 
-            # Check if there was a next page token, set it and then adjust loop control to True
-            if 'nextPageToken' in json_data and dont_bother == False:
-                next_page_token = json_data['nextPageToken']
-                more = True
-                # Loop until there is no more!
-                while more:
-                    # Grab data request again using page token and published after time
-                    you_pull = requests.get(globals.BASE_URL + channel +"&pageToken=" + next_page_token + "&publishedAfter=" + time_pub_after +  "&key=" + globals.API_KEY)
-                    data_sub = you_pull.text
-                    json_data_sub = json.loads(data_sub)
-                    # If no more next page then break the loop
-                    if not 'nextPageToken' in json_data_sub:
-                        more = False
+            time_pub_after = self.pub_after_time(globals.TIME_SUB)
+
+            # Primary loop to parse data from each channel
+            for channel in globals.channels:
+                # Build initial pull request and process json
+                print(channel)
+                you_pull = requests.get(globals.BASE_URL + channel + "&key=" + globals.API_KEY)
+                data = you_pull.text
+                json_data = json.loads(data)
+
+                # Loop control flags, reset to false every time
+                more = False
+                dont_bother = False
+
+                if not 'items' in json_data:
+                    print(data)
+                    continue
+                # Append initial comments
+                for item in json_data['items']:
+                    if self.too_old(item['snippet']['topLevelComment']['snippet']['publishedAt'], time_pub_after):
+                        dont_bother = True
                     else:
-                        next_page_token = json_data_sub['nextPageToken']
-                    # Append our comments list
-                    for item in json_data_sub['items']:
-                        if self.too_old(item['snippet']['topLevelComment']['snippet']['publishedAt'], time_pub_after):
+                        comments.append(" " + item['snippet']['topLevelComment']['snippet']['textOriginal'] + " ")
+
+                # Check if there was a next page token, set it and then adjust loop control to True
+                if 'nextPageToken' in json_data and dont_bother == False:
+                    next_page_token = json_data['nextPageToken']
+                    more = True
+                    # Loop until there is no more!
+                    while more:
+                        # Grab data request again using page token and published after time
+                        you_pull = requests.get(globals.BASE_URL + channel +"&pageToken=" + next_page_token + "&publishedAfter=" + time_pub_after +  "&key=" + globals.API_KEY)
+                        data_sub = you_pull.text
+                        json_data_sub = json.loads(data_sub)
+                        # If no more next page then break the loop
+                        if not 'nextPageToken' in json_data_sub:
                             more = False
                         else:
-                            comments.append(" " + item['snippet']['topLevelComment']['snippet']['textOriginal'] + " ")
+                            next_page_token = json_data_sub['nextPageToken']
+                        # Append our comments list
+                        for item in json_data_sub['items']:
+                            if self.too_old(item['snippet']['topLevelComment']['snippet']['publishedAt'], time_pub_after):
+                                more = False
+                            else:
+                                comments.append(" " + item['snippet']['topLevelComment']['snippet']['textOriginal'] + " ")
 
-        # Process the comments discovered
-        globals.current_results = []
-        sql_conn.context_purge()
-        for comment in comments:
-            for symbol in globals.symbols:
-                comment_context_limit = 20
-                if symbol in globals.common_words:
-                    if " $" + symbol + " " in comment:
-                        if len(symbol) > 1:
-                            discoveries[symbol] += 1
-                            if comment_context_limit > 1:
-                                sql_conn.context_data_write(symbol, comment)
-                                comment_context_limit -= 1
+            # Process the comments discovered
+            globals.current_results = []
+            sql_conn.context_purge()
+            for comment in comments:
+                for symbol in globals.symbols:
+                    comment_context_limit = 20
+                    if symbol in globals.common_words:
+                        if " $" + symbol + " " in comment:
+                            if len(symbol) > 1:
+                                discoveries[symbol] += 1
+                                if comment_context_limit > 1:
+                                    sql_conn.context_data_write(symbol, comment)
+                                    comment_context_limit -= 1
 
-                else:
-                    if " " + symbol + " " in comment or " $" + symbol + " " in comment:
-                        if len(symbol) > 1:
-                            discoveries[symbol] += 1
-                            if comment_context_limit > 1:
-                                sql_conn.context_data_write(symbol, comment)
-                                comment_context_limit -= 1
+                    else:
+                        if " " + symbol + " " in comment or " $" + symbol + " " in comment:
+                            if len(symbol) > 1:
+                                discoveries[symbol] += 1
+                                if comment_context_limit > 1:
+                                    sql_conn.context_data_write(symbol, comment)
+                                    comment_context_limit -= 1
 
-        # Sort the comments by highest and report the top 30, write to DB/memory
-        sql_conn.curr_data_purge()
-        sorted_tuples = sorted(discoveries.items(), key=lambda item: item[1])
-        sorted_dict = {k: v for k, v in sorted_tuples}
-        for symbol, qty in list(reversed(list(sorted_dict.items())))[0:50]:
-            sql_conn.curr_data_write(symbol, qty)
-            globals.current_results.append((symbol,qty))
+            # Sort the comments by highest and report the top 30, write to DB/memory
+            sql_conn.curr_data_purge()
+            sorted_tuples = sorted(discoveries.items(), key=lambda item: item[1])
+            sorted_dict = {k: v for k, v in sorted_tuples}
+            for symbol, qty in list(reversed(list(sorted_dict.items())))[0:50]:
+                sql_conn.curr_data_write(symbol, qty)
+                globals.current_results.append((symbol,qty))
+            return 1;
 
     def get_context(self, symbol):
         return sql_conn.context_data_read(symbol)

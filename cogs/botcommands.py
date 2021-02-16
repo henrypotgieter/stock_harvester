@@ -32,8 +32,11 @@ class botcommands(commands.Cog, name="General Commands"):
     async def scrape_channels(self, context):
         if await self.valid_channel(context):
             await context.send("Scraping channels.. this will take some time!")
-            harvester.scraper()
-            await context.send("Done!")
+            result = harvester.scraper()
+            if result != 1:
+                await context.send("Error, scraper has ran less than one hour ago, please wait until " + result + " (UTC) and try again.")
+            else:
+                await context.send("Done!")
 
     @bot.command(name='channellist', help='List channels being monitored')
     async def channellist(self, context):

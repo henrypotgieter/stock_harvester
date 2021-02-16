@@ -83,3 +83,10 @@ class Sqlconn(object):
 
     def curr_data_write(self, symbol, qty):
         self.sql_write("INSERT INTO curr_data values ('" + symbol + "', '" + str(qty) + "');")
+
+    def last_ran_write(self, last_ran):
+        self.sql_write("UPDATE last_ran SET last_ran = ('" + last_ran + "');")
+
+    def last_ran_read(self):
+        curr_data = self.sql_read("SELECT last_ran FROM last_ran;")
+        return curr_data
