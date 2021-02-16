@@ -4,7 +4,4 @@ def initialize():
     global common_words
     global symbols
     global current_results
-    global API_KEY
-    global BASE_URL
-    global TIME_SUB
     global CONTROL_CHANNEL

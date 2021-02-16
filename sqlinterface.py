@@ -1,9 +1,17 @@
-import sqlite3
+import os
+import mysql.connector as mysql
+from dotenv import load_dotenv
 
 class Sqlconn(object):
-    def __init__(self, db_conn=None):
-        self.db_conn = sqlite3.connect('symbols.db')
+    def __init__(self):
+        load_dotenv('.env')
+        self.HOST = os.getenv('MYSQL_HOST')
+        self.DB = os.getenv('MYSQL_DB')
+        self.USER = os.getenv('MYSQL_USER')
+        self.PASS = os.getenv('MYSQL_PASS')
+        self.db_conn = mysql.connect(host=self.HOST, database=self.DB, user=self.USER, password=self.PASS)
         self.c = self.db_conn.cursor()
+
 
     def sql_read(self, query):
         self.c.execute(query)
@@ -16,7 +24,7 @@ class Sqlconn(object):
         return data
 
     def symbol_ignore_read(self):
-        symbol_ignore_tuples = self.sql_read('SELECT symbol from ignore')
+        symbol_ignore_tuples = self.sql_read('SELECT symbol from ignorelist')
 
         # Detouple symbol_ignore
         symbol_ignore = []
@@ -52,7 +60,7 @@ class Sqlconn(object):
         return symbols
 
     def symbols_ignore_write(self, symbol_name):
-        self.sql_write("INSERT INTO ignore VALUES('" + symbol_name +"')")
+        self.sql_write("INSERT INTO ignorelist (symbol) VALUES('" + symbol_name +"')")
 
     def channel_write(self, channel_name):
         self.sql_write("INSERT INTO channels VALUES ('" + channel_name + "')")
@@ -61,7 +69,7 @@ class Sqlconn(object):
         self.sql_write("DELETE FROM channels where channel = ('" + channel_name + "')")
 
     def symbols_ignore_remove(self, symbol_name):
-        self.sql_write("DELETE FROM ignore WHERE symbol = ('" + symbol_name + "')")
+        self.sql_write("DELETE FROM ignorelist WHERE symbol = ('" + symbol_name + "')")
 
     def curr_data_read(self):
         curr_data = self.sql_read('SELECT * from curr_data order by count desc')

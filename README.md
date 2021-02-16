@@ -14,6 +14,10 @@ future but for now here we are!
 Examine the .env-sample file, replace the values that need to be populated in
 the file with the appropriate data.  Write it to .env instead.'
 
+Create a MYSQL db and user credentials for the bot to access.
+
+Populate the MYSQL db using the data found in the initialize.sql dump.
+
 # Setup
 
 Install the required packages as follows:
@@ -24,7 +28,7 @@ pip install dotenv
 pip install tabulate
 pip install requests
 pip install json
-pip install sqlite3
+pip install mysql-connector-python
 ```
 
 # Usage
